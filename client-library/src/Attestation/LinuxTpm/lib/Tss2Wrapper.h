@@ -7,6 +7,7 @@
 
 #include <vector>
 #include <memory>
+#include <openssl/rsa.h>
 
 #include "TssWrapper.h"
 #include "Tss2Ctx.h"
@@ -152,9 +153,11 @@ public:
      * is signed with the AIK.
      *
      * param[in] pcrSet PcrSet that will be used to create the Ephemeral key auth policy
+     * param[in] app_ephemeral application-generated ephemeral key to import to TPM
      *
      * returns: An attest::EphemeralKey object.
      */
+    attest::EphemeralKey GetEphemeralKey(const attest::PcrSet& pcrSet, RSA* app_ephemeral);
     attest::EphemeralKey GetEphemeralKey(const attest::PcrSet& pcrSet) override;
 
     /**
@@ -167,6 +170,11 @@ public:
      * param[in] rsaHashAlgId: RSA hash algorithm id. Defaults to TPM2_ALG_SHA1 for backward compatibility.
      * returns: Decrypted data.
      */
+    attest::Buffer DecryptWithEphemeralKey(const attest::PcrSet& pcrSet,
+                                           RSA* app_ephemeral,
+                                           const attest::Buffer& encryptedBlob,
+                                           const attest::RsaScheme rsaWrapAlgId = attest::RsaScheme::RsaEs,
+                                           const attest::RsaHashAlg rsaHashAlgId = attest::RsaHashAlg::RsaSha1) override;
     attest::Buffer DecryptWithEphemeralKey(const attest::PcrSet& pcrSet,
                                            const attest::Buffer& encryptedBlob,
                                            const attest::RsaScheme rsaWrapAlgId = attest::RsaScheme::RsaEs,

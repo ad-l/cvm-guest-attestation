@@ -8,6 +8,7 @@
 #include <tss2/tss2_mu.h>
 #include <openssl/evp.h>
 #include <openssl/err.h>
+#include <openssl/rsa.h>
 
 #include "AttestationTypes.h"
 #include "Exceptions.h"
@@ -535,25 +536,46 @@ void Tss2Util::PopulateEphemeralKeyPublicTemplate(Tss2Ctx& ctx,
 
 ESYS_TR Tss2Util::CreateEphemeralKey(Tss2Ctx& ctx,
                                      const attest::PcrSet& pcrSet,
+                                     RSA* app_ephemeral,
                                      TPM2B_PUBLIC** outPub) {
 
     ESYS_TR primaryHandle = ESYS_TR_NONE;
     TPM2B_PUBLIC inPub = {0};
+    TPM2B_SENSITIVE_CREATE inSensitive = {0};
+
     Tss2Util::PopulateEphemeralKeyPublicTemplate(ctx,
                                                  pcrSet,
                                                  inPub);
 
-    // Populate authPolicy with policy digest here.
-
-    TPM2B_SENSITIVE_CREATE inSensitivePrimary = {0};
     TPM2B_DATA outsideInfo = {0};
     TPML_PCR_SELECTION creationPCR = {0};
     TPM2B_AUTH authValue = {0};
+    TSS2_RC ret;
 
-    TSS2_RC ret = Esys_CreatePrimary(ctx.Get(), ESYS_TR_RH_NULL, ESYS_TR_PASSWORD,
-                                     ESYS_TR_NONE, ESYS_TR_NONE, &inSensitivePrimary,
-                                     &inPub, &outsideInfo, &creationPCR,
-                                     &primaryHandle, outPub, nullptr, nullptr, nullptr);
+    if(app_ephemeral) {
+        TPM2B_SENSITIVE priv = {0};
+        priv.size = 2 + sizeof(TPMT_SENSITIVE);
+        const BIGNUM *p = NULL;
+        RSA_get0_factors(app_ephemeral, &p, NULL);
+
+        priv.sensitiveArea.sensitiveType = TPM2_ALG_RSA;
+        priv.sensitiveArea.sensitive.rsa.size = BN_num_bytes(p);
+        BN_bn2bin(p, priv.sensitiveArea.sensitive.rsa.buffer);
+
+        inPub.publicArea.unique.rsa.size = BN_num_bytes(RSA_get0_n(app_ephemeral));
+        BN_bn2bin(RSA_get0_n(app_ephemeral), inPub.publicArea.unique.rsa.buffer);
+        inPub.publicArea.objectAttributes = TPMA_OBJECT_DECRYPT | TPMA_OBJECT_NODA;
+
+        ret = Esys_LoadExternal(ctx.Get(), ESYS_TR_NONE, ESYS_TR_NONE, ESYS_TR_NONE, &priv, &inPub, ESYS_TR_RH_NULL, &primaryHandle);
+        *outPub = (TPM2B_PUBLIC*)malloc(sizeof(TPM2B_PUBLIC));
+        memcpy(*outPub, &inPub, sizeof(TPM2B_PUBLIC));
+    } else {
+        ret = Esys_CreatePrimary(ctx.Get(), ESYS_TR_RH_NULL, ESYS_TR_PASSWORD,
+                                    ESYS_TR_NONE, ESYS_TR_NONE, &inSensitive,
+                                    &inPub, &outsideInfo, &creationPCR,
+                                    &primaryHandle, outPub, nullptr, nullptr, nullptr);
+    }
+
     if (ret != TSS2_RC_SUCCESS) {
         throw Tss2Exception("Failed to create Ephemeral Key", ret);
     }

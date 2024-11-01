@@ -6,7 +6,7 @@
 #pragma once
 
 #include <memory>
-
+#include <openssl/rsa.h>
 #include "AttestationLogger.h"
 #include "AttestationLibTypes.h"
 
@@ -98,6 +98,9 @@ public:
      * @param[in] ptr: Pointer to memory block previously allocated
      */
     virtual void Free(void* ptr) noexcept = 0;
+
+    virtual void SetEphemeral(RSA* key) noexcept = 0;
+    virtual void FreeEphemeral() noexcept = 0;
 };
 
 extern "C" {
@@ -125,10 +128,13 @@ extern "C" {
     * @brief Single shot C function for Rust FFI
     * @param[in] app_data: JSON user data quoted by the TPM and reported by MAA in runtime claim
     * @param[in] pcr: bitfield representing the PCRs used in the TPM quote and reported by MAA
+    * @param[in] ephemeral_key: PEM encoded RSA2048 private key used to be attested (also used to encrypt token), can be NULL
     * @param[out] jwt: 32k buffer where the MAA token will be written
     * @param[out] jwt_len: size of the written MAA token
+    * @param[in] endpoint_url: URL of MAA endpoint to use for attestation
     * @return 0 on success, error code on failure (see AttestationLibTypes.h for mapping)
     */
     DllExports
-    int32_t get_attestation_token(const uint8_t* app_data, uint32_t pcr, uint8_t* jwt, size_t* jwt_len, const char* endpoint_url);
+    int32_t get_attestation_token(const uint8_t* app_data, uint32_t pcr, const char* ephemeral_key,
+                                  uint8_t* jwt, size_t* jwt_len, const char* endpoint_url);
 }

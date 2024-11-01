@@ -9,6 +9,7 @@
 #include <cstring>
 #include <iostream>
 #include <tss2/tss2_mu.h>
+#include <openssl/rsa.h>
 
 #include "Exceptions.h"
 #include "Tpm2Logger.h"
@@ -505,11 +506,11 @@ attest::PcrQuote Tss2Wrapper::UnpackPcrQuoteToRSA(attest::PcrQuote& pcrQuoteMars
     return pcrQuote;
 }
 
-attest::EphemeralKey Tss2Wrapper::GetEphemeralKey(const attest::PcrSet& pcrSet) {
+attest::EphemeralKey Tss2Wrapper::GetEphemeralKey(const attest::PcrSet& pcrSet, RSA* app_ephemeral) {
 
     TPM2B_PUBLIC *outPublic = NULL;
 
-    ESYS_TR primaryHandle = Tss2Util::CreateEphemeralKey(*ctx, pcrSet, &outPublic);
+    ESYS_TR primaryHandle = Tss2Util::CreateEphemeralKey(*ctx, pcrSet, app_ephemeral, &outPublic);
 
     // Store the object in a unique_c_ptr<> to manage clean up after use.
     unique_c_ptr<TPM2B_PUBLIC> outPubPtr(outPublic);
@@ -570,14 +571,19 @@ attest::EphemeralKey Tss2Wrapper::GetEphemeralKey(const attest::PcrSet& pcrSet) 
     return ephemeralKey;
 }
 
+attest::EphemeralKey Tss2Wrapper::GetEphemeralKey(const attest::PcrSet& pcrSet) {
+    return this->GetEphemeralKey(pcrSet, NULL);
+}
+
 attest::Buffer Tss2Wrapper::DecryptWithEphemeralKey(const attest::PcrSet& pcrSet,
+                                                    RSA* app_ephemeral,
                                                     const attest::Buffer& encryptedBlob,
                                                     const attest::RsaScheme rsaWrapAlgId,
                                                     const attest::RsaHashAlg rsaHashAlgId) {
     // Create an ephemeral key here and then use that key to decrypted the encrypted blob.
     TPM2B_PUBLIC *outPublic = NULL;
 
-    ESYS_TR primaryHandle = Tss2Util::CreateEphemeralKey(*ctx, pcrSet, &outPublic);
+    ESYS_TR primaryHandle = Tss2Util::CreateEphemeralKey(*ctx, pcrSet, NULL, &outPublic);
 
     // Store the object in a unique_c_ptr<> to manage clean up after use.
     unique_c_ptr<TPM2B_PUBLIC> outPubPtr(outPublic);
@@ -623,6 +629,13 @@ attest::Buffer Tss2Wrapper::DecryptWithEphemeralKey(const attest::PcrSet& pcrSet
     free(decrypted);
 
     return decryptedBlob;
+}
+
+attest::Buffer Tss2Wrapper::DecryptWithEphemeralKey(const attest::PcrSet& pcrSet,
+                                                    const attest::Buffer& encryptedBlob,
+                                                    const attest::RsaScheme rsaWrapAlgId,
+                                                    const attest::RsaHashAlg rsaHashAlgId) {
+    return this->DecryptWithEphemeralKey(pcrSet, NULL, encryptedBlob, rsaWrapAlgId, rsaHashAlgId);
 }
 
 void Tss2Wrapper::WriteAikCert(const std::vector<unsigned char>& aikCert) {

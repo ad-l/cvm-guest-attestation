@@ -5,6 +5,9 @@
 //-------------------------------------------------------------------------------------------------
 
 #include <cstring>
+#include <openssl/bio.h>
+#include <openssl/pem.h>
+#include <openssl/rsa.h>
 #include "Logging.h"
 #include "AttestationClientImpl.h"
 #include "AttestationClient.h"
@@ -75,7 +78,7 @@ public:
   }
 };
 
-int32_t get_attestation_token(const uint8_t* app_data, uint32_t pcr, uint8_t* token, size_t* jwt_len, const char* endpoint_url) {
+int32_t get_attestation_token(const uint8_t* app_data, uint32_t pcr, const char* key, uint8_t* token, size_t* jwt_len, const char* endpoint_url) {
     AttestationClient* attestation_client = nullptr;
     attest::AttestationLogger* logger = nullptr;
     attest::ClientParameters params = {};
@@ -91,7 +94,18 @@ int32_t get_attestation_token(const uint8_t* app_data, uint32_t pcr, uint8_t* to
         params.client_payload = app_data;
         params.pcr_selector = pcr;
 
+        if(key) {
+            BIO *bio = BIO_new_mem_buf(key, strlen(key));
+            if (bio == NULL)
+                return (int32_t)attest::AttestationResult::ErrorCode::ERROR_FAILED_MEMORY_ALLOCATION;
+
+            attestation_client->SetEphemeral(PEM_read_bio_RSAPrivateKey(bio, NULL, NULL, NULL));
+            BIO_free(bio);
+        }
+
         attest::AttestationResult::ErrorCode err = attestation_client->Attest(params, &jwt).code_;
+        attestation_client->FreeEphemeral();
+
         if(err != attest::AttestationResult::ErrorCode::SUCCESS)
           return (int32_t)err;
 

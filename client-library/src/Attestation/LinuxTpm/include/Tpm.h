@@ -8,6 +8,7 @@
 
 #include <memory>
 #include <vector>
+#include <openssl/rsa.h>
 
 #include "AttestationTypes.h"
 #include "TssWrapper.h"
@@ -45,9 +46,10 @@ public:
     attest::Buffer UnpackAiKPubToRSA(attest::Buffer& aikPubMarshaled) const;
     attest::PcrQuote UnpackPcrQuoteToRSA(attest::PcrQuote& pcrQuoteMarshaled) const;
 
-    attest::EphemeralKey GetEphemeralKey(const attest::PcrSet& pcrSet) const;
+    attest::EphemeralKey GetEphemeralKey(const attest::PcrSet& pcrSet, RSA* app_key) const;
 
     attest::Buffer DecryptWithEphemeralKey(const attest::PcrSet& pcrSet,
+                                           RSA* app_key,
                                            const attest::Buffer& encryptedBlob,
                                            const attest::RsaScheme rsaWrapAlgId = attest::RsaScheme::RsaEs,
                                            const attest::RsaHashAlg rsaHashAlgId = attest::RsaHashAlg::RsaSha1) const;

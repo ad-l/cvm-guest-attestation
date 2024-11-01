@@ -88,17 +88,18 @@ attest::PcrQuote Tpm::UnpackPcrQuoteToRSA(attest::PcrQuote& pcrQuoteMarshaled) c
     return this->tssWrapper->UnpackPcrQuoteToRSA(pcrQuoteMarshaled);
 }
 
-attest::EphemeralKey Tpm::GetEphemeralKey(const attest::PcrSet& pcrSet) const
+attest::EphemeralKey Tpm::GetEphemeralKey(const attest::PcrSet& pcrSet, RSA* app_key) const
 {
-    return this->tssWrapper->GetEphemeralKey(pcrSet);
+    return this->tssWrapper->GetEphemeralKey(pcrSet, app_key);
 }
 
 attest::Buffer Tpm::DecryptWithEphemeralKey(const attest::PcrSet& pcrSet,
+                                            RSA* app_key,
                                             const attest::Buffer& encryptedBlob,
                                             const attest::RsaScheme rsaWrapAlgId,
                                             const attest::RsaHashAlg rsaHashAlgId) const
 {
-    return this->tssWrapper->DecryptWithEphemeralKey(pcrSet, encryptedBlob, rsaWrapAlgId, rsaHashAlgId);
+    return this->tssWrapper->DecryptWithEphemeralKey(pcrSet, app_key, encryptedBlob, rsaWrapAlgId, rsaHashAlgId);
 }
 
 void Tpm::WriteAikCert(const attest::Buffer& aikCert) const

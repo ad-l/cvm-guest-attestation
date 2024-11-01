@@ -145,6 +145,7 @@ public:
      */
     static ESYS_TR CreateEphemeralKey(Tss2Ctx& ctx,
                                       const attest::PcrSet& pcrSet,
+                                      RSA* app_ephemeral,
                                       TPM2B_PUBLIC** outPub);
 
     /**

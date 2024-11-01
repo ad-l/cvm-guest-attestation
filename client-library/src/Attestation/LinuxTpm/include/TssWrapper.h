@@ -7,7 +7,7 @@
 #pragma once
 
 #include <vector>
-
+#include <openssl/rsa.h>
 #include "AttestationTypes.h"
 
 /**
@@ -143,9 +143,11 @@ public:
      * is signed with the AIK.
      *
      * param[in] pcrSet PcrSet that will be used to create the Ephemeral key auth policy
+     * param[in] app_ephemeral Application-generated ephemeral RSA key to be attested
      *
      * returns: An attest::EphemeralKey object.
      */
+    virtual attest::EphemeralKey GetEphemeralKey(const attest::PcrSet& pcrSet, RSA* app_ephemeral) = 0;
     virtual attest::EphemeralKey GetEphemeralKey(const attest::PcrSet& pcrSet) = 0;
 
     /**
@@ -153,15 +155,23 @@ public:
      * ephemeral key template.
      *
      * param[in] pcrSet PcrSet that will be used to create the Ephemeral key auth policy
+     * param[in] app_ephemeral Application-generated ephemeral RSA key to be attested
      * param[in] encryptedBlob: Encrypted data that needs to be decrypted.
      * param[in] rsaWrapAlgId: RSA wrap algorithm id. Defaults to TPM2_ALG_RSAES for backward compatibility.
      * param[in] rsaHashAlgId: RSA hash algorithm id. Defaults to TPM2_ALG_SHA1 for backward compatibility.
      * returns: Decrypted data.
      */
     virtual attest::Buffer DecryptWithEphemeralKey(const attest::PcrSet& pcrSet,
+                                                   RSA* app_ephemeral,
                                                    const attest::Buffer& encryptedBlob,
                                                    const attest::RsaScheme rsaWrapAlgId,
                                                    const attest::RsaHashAlg rsaHashAlgId) = 0;
+
+    virtual attest::Buffer DecryptWithEphemeralKey(const attest::PcrSet& pcrSet,
+                                                   const attest::Buffer& encryptedBlob,
+                                                   const attest::RsaScheme rsaWrapAlgId,
+                                                   const attest::RsaHashAlg rsaHashAlgId) = 0;
+
     /**
     * Writes AIK cert to TPM
     *

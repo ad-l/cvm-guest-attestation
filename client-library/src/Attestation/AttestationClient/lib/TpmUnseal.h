@@ -83,7 +83,7 @@ bool GetEncryptedJwt(const Json::Value& json_obj,
  * @return On success, AttestatitionResult object is returned with error_code set to ErrorCode::SUCCESS. On failure,
  * AttestationResult object is returned with appropriate error code set.
  */
-attest::AttestationResult DecryptInnerKey(uint32_t pcr_selector,
+attest::AttestationResult DecryptInnerKey(uint32_t pcr_selector, RSA* app_key,
                                           const attest::Buffer& encrypted_inner_key,
                                           attest::Buffer& decrypted_key,
                                           const attest::RsaScheme rsaWrapAlgId = attest::RsaScheme::RsaEs,

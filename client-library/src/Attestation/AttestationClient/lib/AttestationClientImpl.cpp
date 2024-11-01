@@ -267,7 +267,7 @@ AttestationResult AttestationClientImpl::Decrypt(const attest::EncryptionType en
         // For encryption type 'NONE', the encrypted data is expected to be the encrypted symmetric key
         std::vector<unsigned char> in_data(encrypted_data, encrypted_data + encrypted_data_size);
         std::vector<unsigned char> out_data;
-        out_data = tpm.DecryptWithEphemeralKey(pcrValues, in_data, rsaWrapAlgId, rsaHashAlgId);
+        out_data = tpm.DecryptWithEphemeralKey(pcrValues, this->ephemeral_key, in_data, rsaWrapAlgId, rsaHashAlgId);
 
         *decrypted_data = (unsigned char*)malloc(sizeof(unsigned char) * out_data.size());
         std::memcpy((void*)*decrypted_data, (void*)out_data.data(), out_data.size());
@@ -311,6 +311,17 @@ void AttestationClientImpl::Free(void* ptr) noexcept {
     }
 
     free(ptr);
+}
+
+void AttestationClientImpl::SetEphemeral(RSA* key) noexcept {
+    if(key != NULL) {
+      CLIENT_LOG_INFO("Using the ephemeral key set by the application");
+    }
+    this->ephemeral_key = key;
+}
+
+void AttestationClientImpl::FreeEphemeral() noexcept {
+    RSA_free(this->ephemeral_key);
 }
 
 AttestationResult AttestationClientImpl::DecryptMaaToken(uint32_t pcr_selector, const std::string& jwt_token_encrypted,
@@ -367,6 +378,7 @@ AttestationResult AttestationClientImpl::DecryptMaaToken(uint32_t pcr_selector, 
 
     attest::Buffer decrypted_key;
     if((result = DecryptInnerKey(pcr_selector,
+                                 this->ephemeral_key,
                                  encrypted_inner_key,
                                  decrypted_key,
                                  attest::RsaScheme::RsaEs,
@@ -567,7 +579,7 @@ AttestationResult AttestationClientImpl::GetTpmInfo(uint32_t pcr_selector, TpmIn
         // to also have SHA256 hash entries.
         PcrSet pcr_values = tpm.GetPCRValues(pcrs, attestation_hash_alg);
 
-        EphemeralKey enc_key = tpm.GetEphemeralKey(pcr_values);
+        EphemeralKey enc_key = tpm.GetEphemeralKey(pcr_values, this->ephemeral_key);
 
         tpm_info.aik_cert_ = aik_cert;
         tpm_info.aik_pub_ = aik_pub;

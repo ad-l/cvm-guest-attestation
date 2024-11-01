@@ -6,6 +6,7 @@
 
 #include <openssl/evp.h>
 #include <openssl/err.h>
+#include <openssl/rsa.h>
 
 #include "AttestationHelper.h"
 #include "AttestationLibConst.h"
@@ -129,7 +130,7 @@ bool attest::GetEncryptedJwt(const Json::Value& json_obj,
     return true;
 }
 
-attest::AttestationResult attest::DecryptInnerKey(uint32_t pcr_selector,
+attest::AttestationResult attest::DecryptInnerKey(uint32_t pcr_selector, RSA* app_key,
                                                   const attest::Buffer& encrypted_inner_key,
                                                   attest::Buffer& decrypted_key,
                                                   const attest::RsaScheme rsaWrapAlgId,
@@ -144,7 +145,7 @@ attest::AttestationResult attest::DecryptInnerKey(uint32_t pcr_selector,
 
         attest::PcrSet pcrValues = tpm.GetPCRValues(list, attestation_hash_alg);
 
-        decrypted_key = tpm.DecryptWithEphemeralKey(pcrValues, encrypted_inner_key, rsaWrapAlgId, rsaHashAlgId);
+        decrypted_key = tpm.DecryptWithEphemeralKey(pcrValues, app_key, encrypted_inner_key, rsaWrapAlgId, rsaHashAlgId);
     }
     catch(const Tss2Exception& e) {
         // Since tss2 errors are throw Tss2Exception exception. Catch it here.

@@ -6,6 +6,7 @@
 #pragma once
 
 #include <vector>
+#include <openssl/rsa.h>
 
 #include "AttestationLibTypes.h"
 #include "AttestationParameters.h"
@@ -27,6 +28,11 @@ public:
         TCG = 0,
         IMA
     };
+
+    /**
+     * @brief user-defined ephemeral RSA key
+     */
+    RSA* ephemeral_key = NULL;
 
     /**
      * @brief This function will be used to initiate an attestation request
@@ -108,6 +114,9 @@ public:
      * @param[in] ptr: Pointer to memory block previously allocated
      */
     virtual void Free(void* ptr) noexcept override;
+
+    void SetEphemeral(RSA* key) noexcept override;
+    void FreeEphemeral() noexcept override;
 
     /**
      * @brief This function will be used to Decrypt a JWT token received from
